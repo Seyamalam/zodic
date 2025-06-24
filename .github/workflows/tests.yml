@@ -1,0 +1,75 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Poetry
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+    
+    - name: Install dependencies
+      run: |
+        poetry install --with test
+    
+    - name: Run tests with pytest
+      run: |
+        poetry run pytest tests/ -v --cov=zodic --cov-report=xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Poetry
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+    
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+    
+    - name: Run black
+      run: poetry run black --check zodic tests
+    
+    - name: Run isort
+      run: poetry run isort --check-only zodic tests
+    
+    - name: Run mypy
+      run: poetry run mypy zodic
+    
+    - name: Run flake8
+      run: poetry run flake8 zodic

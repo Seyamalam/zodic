@@ -3,9 +3,11 @@
 Basic Zodic usage examples.
 
 This file demonstrates the core features of Zodic with practical examples.
+Updated for v0.2.0 with comprehensive feature coverage.
 """
 
 import zodic as z
+from datetime import date, datetime
 
 def basic_types_example():
     """Demonstrate basic type validation."""
@@ -16,6 +18,11 @@ def basic_types_example():
     name = name_schema.parse("Alice")
     print(f"Name: {name}")
     
+    # Email validation
+    email_schema = z.string().email()
+    email = email_schema.parse("alice@example.com")
+    print(f"Email: {email}")
+    
     # Number validation
     age_schema = z.number().int().min(0).max(120)
     age = age_schema.parse(30)
@@ -25,6 +32,16 @@ def basic_types_example():
     active_schema = z.boolean()
     is_active = active_schema.parse(True)
     print(f"Active: {is_active}")
+    
+    # Enum validation
+    role_schema = z.enum(["admin", "user", "guest"])
+    role = role_schema.parse("admin")
+    print(f"Role: {role}")
+    
+    # Literal validation
+    status_schema = z.literal("active")
+    status = status_schema.parse("active")
+    print(f"Status: {status}")
 
 
 def object_validation_example():
@@ -168,6 +185,48 @@ def api_validation_example():
         print(f"API validation failed: {e}")
 
 
+def new_features_example():
+    """Demonstrate new features in v0.2.0."""
+    print("\n=== New Features (v0.2.0) ===")
+    
+    # Date validation
+    from datetime import date, datetime
+    date_schema = z.date()
+    parsed_date = date_schema.parse("2024-12-19")
+    print(f"Parsed date: {parsed_date}")
+    
+    # DateTime validation
+    datetime_schema = z.datetime()
+    parsed_datetime = datetime_schema.parse("2024-12-19T10:30:00")
+    print(f"Parsed datetime: {parsed_datetime}")
+    
+    # URL validation
+    url_schema = z.string().url()
+    url = url_schema.parse("https://example.com")
+    print(f"Valid URL: {url}")
+    
+    # Regex validation
+    code_schema = z.string().regex(r"^[A-Z]{2,3}$")
+    code = code_schema.parse("ABC")
+    print(f"Valid code: {code}")
+    
+    # Union operator
+    flexible_schema = z.string() | z.number()
+    result1 = flexible_schema.parse("hello")
+    result2 = flexible_schema.parse(42)
+    print(f"Union results: {result1}, {result2}")
+    
+    # Fixed positive validation
+    positive_schema = z.number().positive()
+    positive_num = positive_schema.parse(5)
+    print(f"Positive number: {positive_num}")
+    
+    try:
+        positive_schema.parse(0)  # This should fail now
+    except z.ZodError as e:
+        print(f"Zero correctly rejected: {e}")
+
+
 def main():
     """Run all examples."""
     print("Zodic Examples")
@@ -179,6 +238,7 @@ def main():
     transformations_example()
     error_handling_example()
     api_validation_example()
+    new_features_example()
     
     print("\n" + "=" * 50)
     print("All examples completed successfully!")

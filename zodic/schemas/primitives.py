@@ -1,9 +1,13 @@
 """Primitive type schemas for Zodic."""
 
-from typing import Any, Union, Optional
+import re
+from datetime import datetime, date
+from typing import Any, Union, Optional, Pattern, TypeVar
 from ..core.base import Schema
 from ..core.types import ValidationContext
 from ..core.errors import ZodError, invalid_type_issue, custom_issue
+
+T = TypeVar("T")
 
 
 class StringSchema(Schema[str]):
@@ -13,6 +17,9 @@ class StringSchema(Schema[str]):
         super().__init__()
         self._min_length: Optional[int] = None
         self._max_length: Optional[int] = None
+        self._pattern: Optional[Pattern[str]] = None
+        self._email_validation = False
+        self._url_validation = False
 
     def _parse_value(self, value: Any, ctx: ValidationContext) -> str:
         """Parse and validate a string value."""
@@ -42,6 +49,40 @@ class StringSchema(Schema[str]):
                 ]
             )
 
+        # Pattern validation
+        if self._pattern is not None and not self._pattern.match(value):
+            raise ZodError(
+                [
+                    custom_issue(
+                        f"String does not match pattern {self._pattern.pattern}",
+                        ctx,
+                        value,
+                    )
+                ]
+            )
+
+        # Email validation
+        if self._email_validation:
+            email_pattern = re.compile(
+                r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+            )
+            if not email_pattern.match(value):
+                raise ZodError([custom_issue("Invalid email format", ctx, value)])
+
+        # URL validation
+        if self._url_validation:
+            url_pattern = re.compile(
+                r"^https?://"  # http:// or https://
+                r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|"  # domain...
+                r"localhost|"  # localhost...
+                r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
+                r"(?::\d+)?"  # optional port
+                r"(?:/?|[/?]\S+)$",
+                re.IGNORECASE,
+            )
+            if not url_pattern.match(value):
+                raise ZodError([custom_issue("Invalid URL format", ctx, value)])
+
         return value
 
     def min(self, length: int) -> "StringSchema":
@@ -60,11 +101,35 @@ class StringSchema(Schema[str]):
         """Set exact length constraint."""
         return self.min(length).max(length)
 
+    def regex(self, pattern: Union[str, Pattern[str]]) -> "StringSchema":
+        """Set regex pattern constraint."""
+        new_schema = self._clone()
+        if isinstance(pattern, str):
+            new_schema._pattern = re.compile(pattern)
+        else:
+            new_schema._pattern = pattern
+        return new_schema
+
+    def email(self) -> "StringSchema":
+        """Validate as email format."""
+        new_schema = self._clone()
+        new_schema._email_validation = True
+        return new_schema
+
+    def url(self) -> "StringSchema":
+        """Validate as URL format."""
+        new_schema = self._clone()
+        new_schema._url_validation = True
+        return new_schema
+
     def _clone(self) -> "StringSchema":
         """Create a copy of this schema."""
         new_schema = super()._clone()
         new_schema._min_length = self._min_length
         new_schema._max_length = self._max_length
+        new_schema._pattern = self._pattern
+        new_schema._email_validation = self._email_validation
+        new_schema._url_validation = self._url_validation
         return new_schema
 
 
@@ -76,9 +141,14 @@ class NumberSchema(Schema[Union[int, float]]):
         self._min_value: Optional[float] = None
         self._max_value: Optional[float] = None
         self._int_only = False
+        self._positive_only = False
 
     def _parse_value(self, value: Any, ctx: ValidationContext) -> Union[int, float]:
         """Parse and validate a number value."""
+        # Reject boolean values (which are technically int in Python)
+        if isinstance(value, bool):
+            raise ZodError([invalid_type_issue(value, "number", ctx)])
+
         if not isinstance(value, (int, float)):
             raise ZodError([invalid_type_issue(value, "number", ctx)])
 
@@ -95,6 +165,10 @@ class NumberSchema(Schema[Union[int, float]]):
                 value = int(value)
             else:
                 raise ZodError([custom_issue("Expected integer", ctx, value)])
+
+        # Positive validation (more precise than min_value)
+        if self._positive_only and value <= 0:
+            raise ZodError([custom_issue("Number must be positive", ctx, value)])
 
         # Range validations
         if self._min_value is not None and value < self._min_value:
@@ -141,7 +215,9 @@ class NumberSchema(Schema[Union[int, float]]):
 
     def positive(self) -> "NumberSchema":
         """Require the number to be positive (> 0)."""
-        return self.min(0.000001)  # Slightly above 0 to exclude 0
+        new_schema = self._clone()
+        new_schema._positive_only = True
+        return new_schema
 
     def negative(self) -> "NumberSchema":
         """Require the number to be negative (< 0)."""
@@ -157,6 +233,7 @@ class NumberSchema(Schema[Union[int, float]]):
         new_schema._min_value = self._min_value
         new_schema._max_value = self._max_value
         new_schema._int_only = self._int_only
+        new_schema._positive_only = self._positive_only
         return new_schema
 
 
@@ -199,3 +276,216 @@ def boolean() -> BooleanSchema:
 def none() -> NoneSchema:
     """Create a None schema."""
     return NoneSchema()
+
+
+class LiteralSchema(Schema[T]):
+    """Schema for literal value validation."""
+
+    def __init__(self, value: T) -> None:
+        super().__init__()
+        self.literal_value = value
+
+    def _parse_value(self, value: Any, ctx: ValidationContext) -> T:
+        """Parse and validate a literal value."""
+        if value != self.literal_value:
+            raise ZodError(
+                [
+                    custom_issue(
+                        f"Expected literal value {repr(self.literal_value)}, received {repr(value)}",
+                        ctx,
+                        value,
+                    )
+                ]
+            )
+        return self.literal_value
+
+    def _clone(self) -> "LiteralSchema[T]":
+        """Create a copy of this schema."""
+        new_schema = super()._clone()
+        new_schema.literal_value = self.literal_value
+        return new_schema
+
+
+def literal(value: T) -> LiteralSchema[T]:
+    """Create a literal schema."""
+    return LiteralSchema(value)
+
+
+class DateSchema(Schema[date]):
+    """Schema for date validation."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._min_date: Optional[date] = None
+        self._max_date: Optional[date] = None
+
+    def _parse_value(self, value: Any, ctx: ValidationContext) -> date:
+        """Parse and validate a date value."""
+        parsed_date = None
+
+        if isinstance(value, datetime):
+            # Convert datetime to date
+            parsed_date = value.date()
+        elif isinstance(value, date):
+            parsed_date = value
+        elif isinstance(value, str):
+            # Try to parse ISO format date string
+            try:
+                parsed_date = datetime.fromisoformat(
+                    value.replace("Z", "+00:00")
+                ).date()
+            except ValueError:
+                try:
+                    # Try common date formats
+                    for fmt in ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"]:
+                        try:
+                            parsed_date = datetime.strptime(value, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        raise ValueError("No valid date format found")
+                except ValueError:
+                    raise ZodError([custom_issue("Invalid date format", ctx, value)])
+        else:
+            raise ZodError([invalid_type_issue(value, "date", ctx)])
+
+        # Validate date range for all parsed dates
+        if self._min_date is not None and parsed_date < self._min_date:
+            raise ZodError(
+                [
+                    custom_issue(
+                        f"Date must be after {self._min_date}",
+                        ctx,
+                        value,
+                    )
+                ]
+            )
+
+        if self._max_date is not None and parsed_date > self._max_date:
+            raise ZodError(
+                [
+                    custom_issue(
+                        f"Date must be before {self._max_date}",
+                        ctx,
+                        value,
+                    )
+                ]
+            )
+
+        return parsed_date
+
+    def min(self, min_date: date) -> "DateSchema":
+        """Set minimum date constraint."""
+        new_schema = self._clone()
+        new_schema._min_date = min_date
+        return new_schema
+
+    def max(self, max_date: date) -> "DateSchema":
+        """Set maximum date constraint."""
+        new_schema = self._clone()
+        new_schema._max_date = max_date
+        return new_schema
+
+    def _clone(self) -> "DateSchema":
+        """Create a copy of this schema."""
+        new_schema = super()._clone()
+        new_schema._min_date = self._min_date
+        new_schema._max_date = self._max_date
+        return new_schema
+
+
+class DateTimeSchema(Schema[datetime]):
+    """Schema for datetime validation."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._min_datetime: Optional[datetime] = None
+        self._max_datetime: Optional[datetime] = None
+
+    def _parse_value(self, value: Any, ctx: ValidationContext) -> datetime:
+        """Parse and validate a datetime value."""
+        if isinstance(value, datetime):
+            parsed_datetime = value
+        elif isinstance(value, str):
+            # Try to parse ISO format datetime string
+            try:
+                parsed_datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                # Convert to naive datetime if it has timezone info
+                if parsed_datetime.tzinfo is not None:
+                    parsed_datetime = parsed_datetime.replace(tzinfo=None)
+            except ValueError:
+                try:
+                    # Try common datetime formats
+                    for fmt in [
+                        "%Y-%m-%d %H:%M:%S",
+                        "%Y-%m-%dT%H:%M:%S",
+                        "%m/%d/%Y %H:%M:%S",
+                    ]:
+                        try:
+                            parsed_datetime = datetime.strptime(value, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        raise ValueError("No valid datetime format found")
+                except ValueError:
+                    raise ZodError(
+                        [custom_issue("Invalid datetime format", ctx, value)]
+                    )
+        else:
+            raise ZodError([invalid_type_issue(value, "datetime", ctx)])
+
+        # Validate datetime range
+        if self._min_datetime is not None and parsed_datetime < self._min_datetime:
+            raise ZodError(
+                [
+                    custom_issue(
+                        f"Datetime must be after {self._min_datetime}",
+                        ctx,
+                        value,
+                    )
+                ]
+            )
+
+        if self._max_datetime is not None and parsed_datetime > self._max_datetime:
+            raise ZodError(
+                [
+                    custom_issue(
+                        f"Datetime must be before {self._max_datetime}",
+                        ctx,
+                        value,
+                    )
+                ]
+            )
+
+        return parsed_datetime
+
+    def min(self, min_datetime: datetime) -> "DateTimeSchema":
+        """Set minimum datetime constraint."""
+        new_schema = self._clone()
+        new_schema._min_datetime = min_datetime
+        return new_schema
+
+    def max(self, max_datetime: datetime) -> "DateTimeSchema":
+        """Set maximum datetime constraint."""
+        new_schema = self._clone()
+        new_schema._max_datetime = max_datetime
+        return new_schema
+
+    def _clone(self) -> "DateTimeSchema":
+        """Create a copy of this schema."""
+        new_schema = super()._clone()
+        new_schema._min_datetime = self._min_datetime
+        new_schema._max_datetime = self._max_datetime
+        return new_schema
+
+
+def date_schema() -> DateSchema:
+    """Create a date schema."""
+    return DateSchema()
+
+
+def datetime_schema() -> DateTimeSchema:
+    """Create a datetime schema."""
+    return DateTimeSchema()

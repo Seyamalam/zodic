@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -6,15 +6,22 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  POETRY_VERSION: "1.7.1"
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -22,19 +29,45 @@ jobs:
         python-version: ${{ matrix.python-version }}
     
     - name: Install Poetry
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
     
     - name: Install dependencies
-      run: |
-        poetry install --with test
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with test,dev
     
-    - name: Run tests with pytest
+    - name: Run tests
       run: |
-        poetry run pytest tests/ -v --cov=zodic --cov-report=xml
+        poetry run pytest tests/ -v \
+          --cov=zodic \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --cov-fail-under=85 \
+          --junitxml=pytest.xml
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}-${{ matrix.os }}
+        path: |
+          pytest.xml
+          htmlcov/
+          coverage.xml
     
     - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
@@ -42,11 +75,13 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
-  lint:
+  quality:
+    name: Code Quality
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -54,22 +89,107 @@ jobs:
         python-version: "3.11"
     
     - name: Install Poetry
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-3.11-${{ hashFiles('**/poetry.lock') }}
     
     - name: Install dependencies
-      run: |
-        poetry install --with dev
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
     
-    - name: Run black
-      run: poetry run black --check zodic tests
+    - name: Run black (formatting)
+      run: poetry run black --check --diff zodic tests
     
-    - name: Run isort
-      run: poetry run isort --check-only zodic tests
+    - name: Run isort (import sorting)
+      run: poetry run isort --check-only --diff zodic tests
     
-    - name: Run mypy
+    - name: Run flake8 (linting)
+      run: poetry run flake8 zodic tests
+    
+    - name: Run mypy (type checking)
       run: poetry run mypy zodic
     
-    - name: Run flake8
-      run: poetry run flake8 zodic
+    - name: Run bandit (security)
+      run: poetry run bandit -r zodic
+    
+    - name: Run safety (dependency security)
+      run: poetry run safety check
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [test, quality]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+    
+    - name: Build package
+      run: poetry build
+    
+    - name: Check package
+      run: |
+        pip install twine
+        twine check dist/*
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/
+    
+    - name: Test package installation
+      run: |
+        pip install dist/*.whl
+        python -c "import zodic; print('Package installed successfully')"
+
+  performance:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: [test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+    
+    - name: Install dependencies
+      run: poetry install --with dev
+    
+    - name: Run performance benchmarks
+      run: |
+        poetry run python -m pytest benchmarks/ -v --benchmark-only --benchmark-json=benchmark.json
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: benchmark.json

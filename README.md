@@ -1,9 +1,15 @@
-# zodic
+# Zodic
 
 [![PyPI version](https://badge.fury.io/py/zodic.svg)](https://badge.fury.io/py/zodic)
 [![Python versions](https://img.shields.io/pypi/pyversions/zodic.svg)](https://pypi.org/project/zodic/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://github.com/Seyamalam/zodic/workflows/Tests/badge.svg)](https://github.com/Seyamalam/zodic/actions)
+[![CI](https://github.com/Seyamalam/zodic/workflows/CI/badge.svg)](https://github.com/Seyamalam/zodic/actions)
+[![codecov](https://codecov.io/gh/Seyamalam/zodic/branch/main/graph/badge.svg)](https://codecov.io/gh/Seyamalam/zodic)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![Downloads](https://pepy.tech/badge/zodic)](https://pepy.tech/project/zodic)
+[![Downloads](https://pepy.tech/badge/zodic/month)](https://pepy.tech/project/zodic)
 
 A TypeScript [Zod](https://github.com/colinhacks/zod)-inspired validation library for Python with excellent type safety and developer experience.
 
@@ -14,6 +20,10 @@ A TypeScript [Zod](https://github.com/colinhacks/zod)-inspired validation librar
 - **Lightning-fast performance** - 2M+ operations/second
 - **Comprehensive error reporting** with detailed nested paths  
 - **Zero dependencies** - lightweight and fast imports
+- **Rich validation types** - strings, numbers, dates, enums, literals, and more
+- **Advanced string validation** - email, URL, regex patterns
+- **Date/time parsing** - ISO formats and common date strings
+- **Union types** - flexible validation with `|` operator
 - **Extensible architecture** for custom validators
 - **Framework agnostic** - works with FastAPI, Django, Flask, etc.
 
@@ -38,8 +48,9 @@ name = name_schema.parse("Alice")  # Returns "Alice"
 user_schema = z.object({
     "name": z.string().min(1),
     "age": z.number().int().min(0).max(120),
-    "email": z.string().optional(),
-    "is_active": z.boolean().default(True)
+    "email": z.string().email().optional(),
+    "is_active": z.boolean().default(True),
+    "role": z.enum(["admin", "user", "guest"])
 })
 
 # Parse and validate data
@@ -101,6 +112,36 @@ z.string().refine(
 
 # Union types  
 z.union([z.string(), z.number()])         # str | int | float
+z.string() | z.number()                   # Same as above (v0.2.0+)
+```
+
+### New in v0.2.0
+
+```python
+# Literal and enum validation
+z.literal("admin")                        # Exact value match
+z.enum(["red", "green", "blue"])         # Multiple choice
+
+# Enhanced string validation
+z.string().email()                        # Email format validation
+z.string().url()                          # URL format validation
+z.string().regex(r"^[A-Z]{2,3}$")        # Custom regex patterns
+
+# Date and datetime validation
+z.date()                                  # Parse dates from strings or objects
+z.datetime()                              # Parse datetimes with timezone support
+z.date().min(date(2024, 1, 1))           # Date range validation
+
+# Examples
+email_schema = z.string().email()
+email_schema.parse("user@example.com")   # Valid
+
+theme_schema = z.enum(["light", "dark"])
+theme_schema.parse("light")               # Valid
+
+date_schema = z.date()
+date_schema.parse("2024-12-19")          # Returns date(2024, 12, 19)
+date_schema.parse(datetime.now())        # Converts to date
 ```
 
 ### Error Handling
@@ -108,113 +149,168 @@ z.union([z.string(), z.number()])         # str | int | float
 ```python
 # Parse (throws ZodError on failure)
 try:
-    result = z.string().parse(123)
+    result = schema.parse(data)
 except z.ZodError as e:
-    print(e)  # "Validation error at root: Expected string, received int"
+    print(f"Validation failed: {e}")
+    print(f"Issues: {e.issues}")
 
 # Safe parse (returns result object)
-result = z.string().safe_parse(123)
+result = schema.safe_parse(data)
 if result["success"]:
-    print(result["data"])     # Parsed value
+    print(f"Valid data: {result['data']}")
 else:
-    print(result["error"])    # ZodError object
+    print(f"Validation errors: {result['error']}")
+
+# Error formatting
+try:
+    schema.parse(invalid_data)
+except z.ZodError as e:
+    # Get flattened errors
+    errors = e.flatten()
+    # {"field.path": ["error message"]}
+    
+    # Get formatted errors  
+    formatted = e.format()
+    # [{"code": "invalid_type", "message": "...", "path": [...]}]
 ```
 
 ### Real-World Example
 
 ```python
+import zodic as z
+from datetime import date
+
 # API request validation
-api_schema = z.object({
-    "user": z.object({
-        "name": z.string().min(1).max(100),
-        "email": z.string().refine(lambda x: "@" in x, "Invalid email"),
-        "age": z.number().int().min(13).max(120)
+create_user_schema = z.object({
+    "personal_info": z.object({
+        "first_name": z.string().min(1).max(50),
+        "last_name": z.string().min(1).max(50),
+        "email": z.string().email(),
+        "birth_date": z.date().max(date.today()),
+        "phone": z.string().regex(r"^\+?1?\d{9,15}$").optional()
+    }),
+    "account": z.object({
+        "username": z.string().min(3).max(30).regex(r"^[a-zA-Z0-9_]+$"),
+        "password": z.string().min(8).regex(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)"),
+        "role": z.enum(["admin", "moderator", "user"]).default("user"),
+        "permissions": z.array(z.string()).default([])
     }),
     "preferences": z.object({
-        "theme": z.union([z.literal("light"), z.literal("dark")]).default("light"),
+        "theme": z.enum(["light", "dark", "auto"]).default("auto"),
+        "language": z.string().regex(r"^[a-z]{2}$").default("en"),
         "notifications": z.boolean().default(True)
     }).optional(),
-    "tags": z.array(z.string()).max(10).default([])
+    "metadata": z.object({
+        "source": z.literal("api"),
+        "version": z.string().regex(r"^\d+\.\d+\.\d+$"),
+        "created_at": z.datetime().default(lambda: datetime.now())
+    })
 })
 
-# Validate incoming request
+# Usage
 try:
-    validated_data = api_schema.parse(request_data)
-    # Process validated data...
+    user = create_user_schema.parse(request_data)
+    # user is fully typed and validated
+    print(f"Creating user: {user['personal_info']['email']}")
 except z.ZodError as e:
-    return {"error": str(e)}, 400
+    return {"error": "Validation failed", "details": e.flatten()}
 ```
 
-## Why Zodic?
+## Framework Integration
 
-### vs Pydantic
-- **Lighter weight** - Zero dependencies, 10x faster imports
-- **Better API** - More intuitive, chainable methods inspired by Zod
-- **Better errors** - Detailed path reporting for nested validation
+### FastAPI
 
-### vs marshmallow  
-- **Type safety** - Full integration with Python type hints
-- **Performance** - Significantly faster validation
-- **Modern API** - Designed for Python 3.8+ with latest features
+```python
+from fastapi import FastAPI, HTTPException
+import zodic as z
 
-### vs cerberus
-- **Developer experience** - Better error messages and IDE support
-- **Composability** - Easy to build complex schemas from simple parts
-- **Type system** - First-class type safety and inference
+app = FastAPI()
+
+UserSchema = z.object({
+    "name": z.string().min(1),
+    "email": z.string().email(),
+    "age": z.number().int().min(18)
+})
+
+@app.post("/users")
+async def create_user(data: dict):
+    try:
+        user = UserSchema.parse(data)
+        # Process validated user data
+        return {"user": user}
+    except z.ZodError as e:
+        raise HTTPException(status_code=422, detail=e.flatten())
+```
+
+### Django
+
+```python
+from django.http import JsonResponse
+import zodic as z
+
+ContactSchema = z.object({
+    "name": z.string().min(1).max(100),
+    "email": z.string().email(),
+    "message": z.string().min(10).max(1000)
+})
+
+def contact_view(request):
+    if request.method == "POST":
+        try:
+            data = ContactSchema.parse(request.POST.dict())
+            # Process validated data
+            return JsonResponse({"status": "success"})
+        except z.ZodError as e:
+            return JsonResponse({"errors": e.flatten()}, status=400)
+```
 
 ## Performance
 
-Zodic is designed for speed:
+Zodic is designed for high performance:
 
-```
-String validation:  2,000,000+ ops/sec
-Number validation:  1,600,000+ ops/sec  
-Object validation:    297,000+ ops/sec
-```
-
-## Development
-
-```bash
-# Clone and install
-git clone https://github.com/Seyamalam/zodic.git
-cd zodic
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run type checking  
-mypy zodic
-
-# Format code
-black zodic tests
-isort zodic tests
-```
+- **2M+ validations/second** for simple schemas
+- **500K+ validations/second** for complex nested objects  
+- **Zero dependencies** - fast imports and minimal overhead
+- **Optimized error handling** - detailed errors without performance cost
+- **Memory efficient** - minimal allocations during validation
 
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-- **Bug reports**: [GitHub Issues](https://github.com/Seyamalam/zodic/issues)
-- **Feature requests**: [GitHub Issues](https://github.com/Seyamalam/zodic/issues)
-- **Pull requests**: [GitHub PRs](https://github.com/Seyamalam/zodic/pulls)
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Seyamalam/zodic.git
+cd zodic
+
+# Install dependencies
+poetry install
+
+# Run tests
+poetry run pytest
+
+# Run quality checks
+poetry run black zodic tests
+poetry run isort zodic tests  
+poetry run mypy zodic
+poetry run flake8 zodic tests
+```
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## Changelog
 
-Inspired by [Zod](https://github.com/colinhacks/zod) - the amazing TypeScript validation library that set the standard for developer experience in schema validation.
+See [CHANGELOG.md](CHANGELOG.md) for version history and migration guides.
 
-## Roadmap
+## Support
 
-- **v0.1**: Core validation with basic types (CURRENT)
-- **v0.2**: Enhanced string/number validators (email, URL, regex, etc.)
-- **v0.3**: Advanced features (recursive schemas, conditional validation)
-- **v0.4**: Framework integrations (FastAPI, Django, Flask)
-- **v1.0**: Production ready with full Zod feature parity
-
----
+- 📖 [Documentation](https://github.com/Seyamalam/zodic)
+- 🐛 [Issue Tracker](https://github.com/Seyamalam/zodic/issues)
+- 💬 [Discussions](https://github.com/Seyamalam/zodic/discussions)
+- 📧 [Email Support](mailto:seyamalam41@gmail.com)
 
 **Star us on GitHub if Zodic helps you build better Python applications!**

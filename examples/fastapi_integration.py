@@ -23,7 +23,7 @@ UserCreateSchema = z.object({
     "email": z.string().refine(lambda x: "@" in x and "." in x, "Invalid email format"),
     "age": z.number().int().min(13).max(120),
     "preferences": z.object({
-        "theme": z.union([z.literal("light"), z.literal("dark")]).default("light"),
+        "theme": z.enum(["light", "dark"]).default("light"),
         "notifications": z.boolean().default(True)
     }).optional()
 })

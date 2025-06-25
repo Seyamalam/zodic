@@ -1,0 +1,49 @@
+name: Question
+description: Ask a question about using Zodic
+title: "[Question]: "
+labels: ["question", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about using Zodic? We're here to help!
+        
+        Before asking, please check:
+        - [Documentation](https://github.com/YOUR_USERNAME/zodic#readme)
+        - [Existing issues](https://github.com/YOUR_USERNAME/zodic/issues)
+        - [GitHub Discussions](https://github.com/YOUR_USERNAME/zodic/discussions)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+      placeholder: Ask your question here
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to accomplish?
+      placeholder: Describe what you're working on
+
+  - type: textarea
+    id: code-sample
+    attributes:
+      label: Code Sample
+      description: If applicable, provide a code sample showing what you've tried
+      render: python
+      placeholder: |
+        import zodic as z
+        
+        # What you've tried so far
+        schema = z.string()
+        # ...
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Any other details that might be helpful

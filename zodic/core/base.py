@@ -173,9 +173,10 @@ class Schema(ABC, Generic[T]):
 
     def __or__(self, other: "Schema[U]") -> "Schema[Union[T, U]]":
         """Support union syntax with | operator."""
-        from ..schemas.special import union
+        # Import here to avoid circular imports
+        from ..schemas.special import UnionSchema
 
-        return union([self, other])
+        return UnionSchema([self, other])
 
 
 # Sentinel value for undefined/missing values

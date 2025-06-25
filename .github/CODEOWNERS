@@ -1,0 +1,20 @@
+# Global code owners
+* @YOUR_USERNAME
+
+# Core library
+/zodic/ @YOUR_USERNAME
+
+# Tests
+/tests/ @YOUR_USERNAME
+
+# CI/CD and workflows
+/.github/ @YOUR_USERNAME
+
+# Documentation
+/README.md @YOUR_USERNAME
+/CONTRIBUTING.md @YOUR_USERNAME
+/CHANGELOG.md @YOUR_USERNAME
+
+# Package configuration
+/pyproject.toml @YOUR_USERNAME
+/poetry.lock @YOUR_USERNAME

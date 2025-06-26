@@ -47,12 +47,14 @@ class ValidationContext:
 # Parse result types - using separate definitions for Python 3.9/3.10 compatibility
 class ParseSuccessDict(TypedDict):
     """Successful parse result structure."""
+
     success: Literal[True]
     data: Any
 
 
 class ParseFailureDict(TypedDict):
     """Failed parse result structure."""
+
     success: Literal[False]
     error: "ZodError"
 

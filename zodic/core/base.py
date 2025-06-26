@@ -3,26 +3,27 @@
 from abc import ABC, abstractmethod
 from typing import (
     Any,
-    TypeVar,
-    Generic,
-    Union,
-    Optional,
     Callable,
-    Type,
-    cast,
+    Generic,
     List,
+    Optional,
     Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
 )
+
+from .errors import ValidationIssue, ZodError, custom_issue
 from .types import (
-    SafeParseResult,
-    ParseResult,
-    ValidationContext,
-    ParseSuccess,
     ParseFailure,
-    TransformProtocol,
+    ParseResult,
+    ParseSuccess,
     RefinementProtocol,
+    SafeParseResult,
+    TransformProtocol,
+    ValidationContext,
 )
-from .errors import ZodError, ValidationIssue, custom_issue
 
 T = TypeVar("T")
 U = TypeVar("U")

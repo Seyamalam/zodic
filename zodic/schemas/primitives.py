@@ -1,11 +1,12 @@
 """Primitive type schemas for Zodic."""
 
 import re
-from datetime import datetime, date
-from typing import Any, Union, Optional, Pattern, TypeVar
+from datetime import date, datetime
+from typing import Any, Optional, Pattern, TypeVar, Union
+
 from ..core.base import Schema
+from ..core.errors import ZodError, custom_issue, invalid_type_issue
 from ..core.types import ValidationContext
-from ..core.errors import ZodError, invalid_type_issue, custom_issue
 
 T = TypeVar("T")
 

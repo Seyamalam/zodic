@@ -1,11 +1,11 @@
 """Type definitions for Zodic."""
 
-from typing import Any, Dict, List, Optional, TypeVar, Union, Generic, Protocol
+from typing import Any, Dict, Generic, List, Optional, Protocol, TypeVar, Union
 
 try:
-    from typing import TypedDict, Literal
+    from typing import Literal, TypedDict
 except ImportError:
-    from typing_extensions import TypedDict, Literal
+    from typing_extensions import Literal, TypedDict
 
 # Type variables
 T = TypeVar("T")

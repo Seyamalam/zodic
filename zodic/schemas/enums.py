@@ -1,9 +1,10 @@
 """Enum schema types for Zodic."""
 
 from typing import Any, List, TypeVar, Union
+
 from ..core.base import Schema
-from ..core.types import ValidationContext
 from ..core.errors import ZodError, custom_issue
+from ..core.types import ValidationContext
 
 T = TypeVar("T")
 

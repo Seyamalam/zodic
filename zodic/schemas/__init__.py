@@ -1,8 +1,8 @@
 """Zodic schema implementations."""
 
-from .primitives import StringSchema, NumberSchema, BooleanSchema, NoneSchema
-from .collections import ObjectSchema, ArraySchema
-from .special import OptionalSchema, NullableSchema, UnionSchema
+from .collections import ArraySchema, ObjectSchema
+from .primitives import BooleanSchema, NoneSchema, NumberSchema, StringSchema
+from .special import NullableSchema, OptionalSchema, UnionSchema
 
 __all__ = [
     "StringSchema",

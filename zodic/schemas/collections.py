@@ -1,9 +1,10 @@
 """Collection type schemas for Zodic."""
 
-from typing import Any, Dict, List, TypeVar, Union, cast, Optional
+from typing import Any, Dict, List, Optional, TypeVar, Union, cast
+
 from ..core.base import Schema
+from ..core.errors import ZodError, custom_issue, invalid_type_issue
 from ..core.types import ValidationContext
-from ..core.errors import ZodError, invalid_type_issue, custom_issue
 
 T = TypeVar("T")
 

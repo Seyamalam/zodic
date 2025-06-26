@@ -1,6 +1,6 @@
 """Type definitions for Zodic."""
 
-from typing import Any, Dict, Generic, List, Optional, Protocol, TypeVar, Union
+from typing import Any, Dict, List, Optional, Protocol, TypeVar, Union
 
 try:
     from typing import Literal, TypedDict
@@ -44,23 +44,32 @@ class ValidationContext:
         return result
 
 
-# Parse result types
-class ParseSuccess(TypedDict, Generic[T]):
-    """Successful parse result."""
-
+# Parse result types - using separate definitions for Python 3.9/3.10 compatibility
+class ParseSuccessDict(TypedDict):
+    """Successful parse result structure."""
     success: Literal[True]
-    data: T
+    data: Any
 
 
-class ParseFailure(TypedDict):
-    """Failed parse result."""
-
+class ParseFailureDict(TypedDict):
+    """Failed parse result structure."""
     success: Literal[False]
     error: "ZodError"
 
 
+# Type aliases for better typing
+def ParseSuccess(success: Literal[True], data: T) -> ParseSuccessDict:
+    """Create a successful parse result."""
+    return {"success": success, "data": data}
+
+
+def ParseFailure(success: Literal[False], error: "ZodError") -> ParseFailureDict:
+    """Create a failed parse result."""
+    return {"success": success, "error": error}
+
+
 # Union type for safe parse results
-SafeParseResult = Union[ParseSuccess[T], ParseFailure]
+SafeParseResult = Union[ParseSuccessDict, ParseFailureDict]
 ParseResult = T
 
 

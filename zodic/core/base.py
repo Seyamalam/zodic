@@ -64,7 +64,7 @@ class Schema(ABC, Generic[T]):
         else:
             raise result["error"]
 
-    def safe_parse(self, value: Any) -> SafeParseResult[T]:
+    def safe_parse(self, value: Any) -> SafeParseResult:
         """
         Parse and validate the input value, returning a result object.
 

@@ -8,7 +8,6 @@ Example:
     >>> import zodic as z
     >>> schema = z.string().min(3).max(10)
     >>> result = schema.parse("hello")  # Returns "hello"
-    >>> 
     >>> user_schema = z.object({
     ...     'name': z.string(),
     ...     'age': z.number().int().positive()
@@ -22,6 +21,8 @@ __email__ = "seyamalam41@gmail.com"
 
 from .core.base import Schema
 from .core.errors import ValidationError, ZodError
+from .schemas.collections import array, object
+from .schemas.enums import enum
 from .schemas.primitives import (
     boolean,
     date_schema,
@@ -31,13 +32,11 @@ from .schemas.primitives import (
     number,
     string,
 )
+from .schemas.special import nullable, optional, union
 
 # Convenience aliases
 date = date_schema
 datetime = datetime_schema
-from .schemas.collections import array, object
-from .schemas.enums import enum
-from .schemas.special import nullable, optional, union
 
 # Main API exports - following Zod's naming convention
 __all__ = [

@@ -1,23 +1,11 @@
 """Base schema class for Zodic."""
 
 from abc import ABC, abstractmethod
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union, cast
 
-from .errors import ValidationIssue, ZodError, custom_issue
+from .errors import ZodError, custom_issue
 from .types import (
     ParseFailure,
-    ParseResult,
     ParseSuccess,
     RefinementProtocol,
     SafeParseResult,
@@ -42,7 +30,10 @@ class Schema(ABC, Generic[T]):
 
     @abstractmethod
     def _parse_value(self, value: Any, ctx: ValidationContext) -> T:
-        """Parse and validate the input value. Must be implemented by subclasses."""
+        """Parse and validate the input value.
+        
+        Must be implemented by subclasses.
+        """
         pass
 
     def parse(self, value: Any) -> T:
@@ -60,7 +51,7 @@ class Schema(ABC, Generic[T]):
         """
         result = self.safe_parse(value)
         if result["success"]:
-            return result["data"]
+            return result["data"]  # type: ignore
         else:
             raise result["error"]
 
@@ -123,13 +114,13 @@ class Schema(ABC, Generic[T]):
         """Make this schema optional (value can be None or undefined)."""
         new_schema = self._clone()
         new_schema._optional = True
-        return new_schema
+        return cast("Schema[Union[T, None]]", new_schema)
 
     def nullable(self) -> "Schema[Union[T, None]]":
         """Make this schema nullable (value can be None)."""
         new_schema = self._clone()
         new_schema._nullable = True
-        return new_schema
+        return cast("Schema[Union[T, None]]", new_schema)
 
     def default(self, value: T) -> "Schema[T]":
         """Provide a default value for this schema."""
@@ -138,14 +129,14 @@ class Schema(ABC, Generic[T]):
         new_schema._has_default = True
         return new_schema
 
-    def transform(self, func: TransformProtocol[T, U]) -> "Schema[U]":
+    def transform(self, func: TransformProtocol) -> "Schema[Any]":
         """Apply a transformation function to the parsed value."""
         new_schema = self._clone()
         new_schema._transforms.append(func)
-        return cast("Schema[U]", new_schema)
+        return cast("Schema[Any]", new_schema)
 
     def refine(
-        self, predicate: RefinementProtocol[T], message: str = "Invalid value"
+        self, predicate: RefinementProtocol, message: str = "Invalid value"
     ) -> "Schema[T]":
         """Add a custom validation refinement."""
         new_schema = self._clone()

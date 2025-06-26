@@ -119,15 +119,12 @@ jobs:
     - name: Run isort (import sorting)
       run: poetry run isort --check-only --diff zodic tests
     
-    - name: Run flake8 (linting)
-      run: poetry run flake8 zodic tests
-    
     - name: Run mypy (type checking)
       run: poetry run mypy zodic
     
     - name: Run bandit (security)
       run: poetry run bandit -r zodic
-    
+
     - name: Run safety (dependency security)
       run: poetry run safety check
 

@@ -1,6 +1,6 @@
 """Special schema types for Zodic."""
 
-from typing import Any, List, TypeVar, Union, cast
+from typing import Any, List, TypeVar, Union
 
 from ..core.base import Schema
 from ..core.errors import ZodError, custom_issue

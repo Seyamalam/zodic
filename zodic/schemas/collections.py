@@ -1,6 +1,6 @@
 """Collection type schemas for Zodic."""
 
-from typing import Any, Dict, List, Optional, TypeVar, Union, cast
+from typing import Any, Dict, List, Optional, TypeVar, cast
 
 from ..core.base import Schema
 from ..core.errors import ZodError, custom_issue, invalid_type_issue
@@ -108,7 +108,7 @@ class ObjectSchema(Schema[Dict[str, Any]]):
 
     def _clone(self) -> "ObjectSchema":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("ObjectSchema", super()._clone())
         new_schema.shape = self.shape.copy()
         new_schema._strict = self._strict
         new_schema._passthrough = self._passthrough
@@ -205,7 +205,7 @@ class ArraySchema(Schema[List[T]]):
 
     def _clone(self) -> "ArraySchema[T]":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("ArraySchema[T]", super()._clone())
         new_schema.element_schema = self.element_schema
         new_schema._min_length = self._min_length
         new_schema._max_length = self._max_length

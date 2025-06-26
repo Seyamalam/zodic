@@ -2,13 +2,12 @@
 
 from .base import Schema
 from .errors import ValidationError, ZodError
-from .types import ParseResult, SafeParseResult, ValidationContext
+from .types import SafeParseResult, ValidationContext
 
 __all__ = [
     "Schema",
     "ZodError",
     "ValidationError",
-    "ParseResult",
     "SafeParseResult",
     "ValidationContext",
 ]

@@ -1,6 +1,6 @@
 """Enum schema types for Zodic."""
 
-from typing import Any, List, TypeVar, Union
+from typing import Any, List, TypeVar, cast
 
 from ..core.base import Schema
 from ..core.errors import ZodError, custom_issue
@@ -29,11 +29,11 @@ class EnumSchema(Schema[T]):
                     )
                 ]
             )
-        return value
+        return cast(T, value)
 
     def _clone(self) -> "EnumSchema[T]":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("EnumSchema[T]", super()._clone())
         new_schema.values = self.values.copy()
         return new_schema
 

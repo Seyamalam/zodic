@@ -2,7 +2,7 @@
 
 import re
 from datetime import date, datetime
-from typing import Any, Optional, Pattern, TypeVar, Union
+from typing import Any, Optional, Pattern, TypeVar, Union, cast
 
 from ..core.base import Schema
 from ..core.errors import ZodError, custom_issue, invalid_type_issue
@@ -125,7 +125,7 @@ class StringSchema(Schema[str]):
 
     def _clone(self) -> "StringSchema":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("StringSchema", super()._clone())
         new_schema._min_length = self._min_length
         new_schema._max_length = self._max_length
         new_schema._pattern = self._pattern
@@ -194,7 +194,7 @@ class NumberSchema(Schema[Union[int, float]]):
                 ]
             )
 
-        return value
+        return cast(Union[int, float], value)
 
     def min(self, value: float) -> "NumberSchema":
         """Set minimum value constraint."""
@@ -230,7 +230,7 @@ class NumberSchema(Schema[Union[int, float]]):
 
     def _clone(self) -> "NumberSchema":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("NumberSchema", super()._clone())
         new_schema._min_value = self._min_value
         new_schema._max_value = self._max_value
         new_schema._int_only = self._int_only
@@ -302,7 +302,7 @@ class LiteralSchema(Schema[T]):
 
     def _clone(self) -> "LiteralSchema[T]":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("LiteralSchema[T]", super()._clone())
         new_schema.literal_value = self.literal_value
         return new_schema
 
@@ -390,7 +390,7 @@ class DateSchema(Schema[date]):
 
     def _clone(self) -> "DateSchema":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("DateSchema", super()._clone())
         new_schema._min_date = self._min_date
         new_schema._max_date = self._max_date
         return new_schema
@@ -476,7 +476,7 @@ class DateTimeSchema(Schema[datetime]):
 
     def _clone(self) -> "DateTimeSchema":
         """Create a copy of this schema."""
-        new_schema = super()._clone()
+        new_schema = cast("DateTimeSchema", super()._clone())
         new_schema._min_datetime = self._min_datetime
         new_schema._max_datetime = self._max_datetime
         return new_schema

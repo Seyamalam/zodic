@@ -1,11 +1,18 @@
 """Type definitions for Zodic."""
 
-from typing import Any, Dict, List, Optional, Protocol, TypeVar, Union
+import sys
+from typing import Any, List, Optional, Protocol, TypeVar, Union
 
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
+# Always use typing_extensions for Literal to avoid conflicts
 try:
-    from typing import Literal, TypedDict
+    from typing_extensions import Literal
 except ImportError:
-    from typing_extensions import Literal, TypedDict
+    from typing import Literal  # type: ignore[assignment]
 
 # Type variables
 T = TypeVar("T")
@@ -44,7 +51,8 @@ class ValidationContext:
         return result
 
 
-# Parse result types - using separate definitions for Python 3.9/3.10 compatibility
+# Parse result types - using separate definitions for Python 3.9/3.10
+# compatibility
 class ParseSuccessDict(TypedDict):
     """Successful parse result structure."""
 
@@ -56,7 +64,7 @@ class ParseFailureDict(TypedDict):
     """Failed parse result structure."""
 
     success: Literal[False]
-    error: "ZodError"
+    error: Any  # ZodError - avoiding forward reference
 
 
 # Type aliases for better typing
@@ -65,14 +73,13 @@ def ParseSuccess(success: Literal[True], data: T) -> ParseSuccessDict:
     return {"success": success, "data": data}
 
 
-def ParseFailure(success: Literal[False], error: "ZodError") -> ParseFailureDict:
+def ParseFailure(success: Literal[False], error: Any) -> ParseFailureDict:
     """Create a failed parse result."""
     return {"success": success, "error": error}
 
 
 # Union type for safe parse results
 SafeParseResult = Union[ParseSuccessDict, ParseFailureDict]
-ParseResult = T
 
 
 # Issue types for error reporting
@@ -87,27 +94,27 @@ class ValidationIssue(TypedDict):
 
 
 # Protocol for custom validators
-class ValidatorProtocol(Protocol[T]):
+class ValidatorProtocol(Protocol):
     """Protocol for custom validator functions."""
 
-    def __call__(self, value: Any, ctx: ValidationContext) -> T:
+    def __call__(self, value: Any, ctx: ValidationContext) -> Any:
         """Validate and return the parsed value."""
         ...
 
 
 # Transform function protocol
-class TransformProtocol(Protocol[T, U]):
+class TransformProtocol(Protocol):
     """Protocol for transform functions."""
 
-    def __call__(self, value: T) -> U:
+    def __call__(self, value: Any) -> Any:
         """Transform the input value to output value."""
         ...
 
 
 # Refinement function protocol
-class RefinementProtocol(Protocol[T]):
+class RefinementProtocol(Protocol):
     """Protocol for refinement/custom validation functions."""
 
-    def __call__(self, value: T) -> bool:
+    def __call__(self, value: Any) -> bool:
         """Return True if value passes validation."""
         ...

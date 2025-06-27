@@ -11,6 +11,7 @@ from zodic import ZodError
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 class TestEdgeCases:
     """Tests for edge cases and potential issues."""
 

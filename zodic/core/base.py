@@ -31,7 +31,7 @@ class Schema(ABC, Generic[T]):
     @abstractmethod
     def _parse_value(self, value: Any, ctx: ValidationContext) -> T:
         """Parse and validate the input value.
-        
+
         Must be implemented by subclasses.
         """
         pass

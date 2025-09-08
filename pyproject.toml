@@ -42,7 +42,7 @@ bandit = "^1.7.0"
 safety = "^3.2.7"
 # Alternative: pip-audit = "^2.6.0"  # More modern alternative to safety
 pre-commit = "^3.0.0"
-twine = "^4.0.0"
+twine = ">=4,<7"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.0.0"
